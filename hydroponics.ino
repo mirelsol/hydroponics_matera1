@@ -98,6 +98,9 @@ void checkWaterPump() {
     }
   }
   else {
+    if (isNotifiedPumpOff) {
+      sendEmail("The pump is now on");
+    }
     isNotifiedPumpOff = false;
   }
   displaySystemInfo();
@@ -130,6 +133,9 @@ void readWaterVolume() {
     }
   }
   else {
+    if (isNotifiedWaterWrong) {
+      sendEmail("Water volume is now OK : " + String(waterVol) + " L");
+    }    
     isNotifiedWaterWrong = false;
   }
   
@@ -137,7 +143,7 @@ void readWaterVolume() {
   if (DEBUG) {
     char v[6];
     dtostrf(distance, 4, 2, v);
-    String d = "d wat.=" + String(v);
+    String d = "d wat.=" + String(v) + " " + String(waterVol) + " L";
     displayDebug(d);
   }
 }
@@ -179,6 +185,9 @@ void readPh() {
     }
   }
   else {
+    if (isNotifiedPhWrong) {
+      sendEmail("Ph value is now OK : " + String(phValue));
+    }
     isNotifiedPhWrong = false;
   }
   
@@ -195,6 +204,7 @@ void displaySystemInfo() {
 void displayWaterInfo() {
   lcdClearLine(1);
   char qty[6]="ERR", ph[6];
+  
   if (waterVol >= 0 && waterVol <= TANK_MAX_L) {
     dtostrf(waterVol, 4, 2, qty);
   }
@@ -206,12 +216,10 @@ void displayWaterInfo() {
 boolean sendEmail(String msg) {
   if (SEND_MAIL) {
     Process p;
-    mailCommand += " \"[Hydroponics] " + msg + "\" \"" + msg + "\"";
+    String email = mailCommand + " \"[Hydroponics] " + msg + "\" \"" + msg + "\"";
+    //mailCommand += " \"[Hydroponics] " + msg + "\" \"" + msg + "\"";
     displayDebug("Sending mail...");
-    int res = p.runShellCommand(mailCommand);
-    // do nothing until the process finishes, so you get the whole output:
-    //while(p.running());  
-    displayDebug("Email sent");
+    int res = p.runShellCommand(email);
     delay(2000);
     return (res == 0);
   }
