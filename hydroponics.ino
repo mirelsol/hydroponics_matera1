@@ -62,6 +62,7 @@ void setup() {
   }
   lcdClearLine(0);
   lcd.print("Setup done...");
+  sendEmail("Arduino Hydroponics is up!");
 }
 
 void loop() {
