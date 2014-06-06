@@ -18,7 +18,6 @@ float waterVol = 0; // in liters
 float phValue = 0;
 boolean isPumpOn = false;
 boolean isNotifiedPumpOff = false;
-boolean isNotifiedPhWrong = false;
 boolean isNotifiedWaterWrong = false;
 int waterHFreq, pumpOkFreq, phFreq;
 
@@ -176,20 +175,6 @@ void readPh() {
   // --- convert the millivolt into pH value
   // pH = -0.017 * mV + 7 + PH_OFFSET
   phValue = 3.5 * phValue + PH_OFFSET;
-  
-  if (phValue < PH_MIN || phValue > PH_MAX) {
-    if (!isNotifiedPhWrong) { // Just send it once
-      if (sendEmail("Ph value wrong : " + String(phValue))) {
-        isNotifiedPhWrong = true;
-      }
-    }
-  }
-  else {
-    if (isNotifiedPhWrong) {
-      sendEmail("Ph value is now OK : " + String(phValue));
-    }
-    isNotifiedPhWrong = false;
-  }
   
   displayWaterInfo();
 }
