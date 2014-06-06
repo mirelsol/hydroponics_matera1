@@ -44,6 +44,7 @@ void setup() {
 
   if (DEBUG) {
     Serial.begin(9600);
+    while(!Serial);  // wait for Serial port to connect.
   }
   Bridge.begin();
   lcd.init();
