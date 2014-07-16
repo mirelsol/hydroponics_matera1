@@ -11,6 +11,7 @@
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 #include <Process.h>
+#include <NewPing.h> // For ultrasonic sensor
 
 long lastTimeWaterRead, lastTimePhRead, lastTimePumpCheck;
 long curTime;
@@ -26,6 +27,9 @@ String mailCommand;
 
 // Set the LCD address to 0x20 for a 20 chars and 4 line display
 LiquidCrystal_I2C lcd(0x20, 20, 4);
+
+// Ultrasonic init
+NewPing sonar(USND_TRIG_PIN, USND_ECHO_PIN, USND_MAX_DIST);
 
 // Interrupt called function
 void countWaterFlow() {
@@ -107,24 +111,12 @@ void checkWaterPump() {
 }
 
 void readWaterVolume() {
-  // The following trigPin/echoPin cycle is used to determine the
-  // distance of the nearest object by bouncing soundwaves off of it.
-  // Test distance = (high level time×velocity of sound (340M/S) / 2
-  digitalWrite(USND_TRIG_PIN, LOW); 
-  delayMicroseconds(2); 
+  // Wait 50ms between pings (about 20 pings/sec). 29ms should be the shortest delay between pings.
+  delay(50);
   
-  digitalWrite(USND_TRIG_PIN, HIGH);
-  delayMicroseconds(10); 
-  
-  digitalWrite(USND_TRIG_PIN, LOW);
-  // pulseIn waits for the pin to go HIGH, starts timing, then waits for the pin to go LOW and stops timing
-  long duration = pulseIn(USND_ECHO_PIN, HIGH);
-  
-  // Calculate the distance (in cm) based on the speed of sound.
-  //distance = duration/58.2;
-  //float distance = round(duration * 0.0340 / 2); // 5 mm error tolerance
-  float distance = duration * 0.0340 / 2;
-  waterVol = ((TANK_HEIGHT - round(distance)) * TANK_SURFACE) / 1000;
+  // Do multiple pings (default=5), discard out of range pings and return median in microseconds
+  unsigned int distance = sonar.convert_cm(sonar.ping_median());
+  waterVol = ((TANK_HEIGHT - distance) * TANK_SURFACE) / 1000;
   if (waterVol < TANK_MIN_L || waterVol > TANK_MAX_L) {
     if (!isNotifiedWaterWrong) { // Just send a notification once
       if (sendEmail("Water volume is wrong : " + String(waterVol) + " L")) {
@@ -141,9 +133,7 @@ void readWaterVolume() {
   
   displayWaterInfo();
   if (DEBUG) {
-    char v[6];
-    dtostrf(distance, 4, 2, v);
-    String d = "d wat.=" + String(v) + " " + String(waterVol) + " L";
+    String d = "d wat.=" + String(distance) + " " + String(waterVol) + " L";
     displayDebug(d);
   }
 }
