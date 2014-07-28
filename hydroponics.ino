@@ -2,7 +2,6 @@
   Hydroponics system, uses :
   - HC-SR04 ultrasound sensor
   - LCD I2C TWI LCD2004 Module (SDA : pin 2 / SCL : pin 3)
-  - Analog pH meter SEN0161
   - G1/2 Water Flow sensor (Model:POW110D3B)
 **/
 
@@ -13,14 +12,13 @@
 #include <Process.h>
 #include <NewPing.h> // For ultrasonic sensor
 
-long lastTimeWaterRead, lastTimePhRead, lastTimePumpCheck;
+long lastTimeWaterRead, lastTimePumpCheck;
 long curTime;
 float waterVol = 0; // in liters
-float phValue = 0;
 boolean isPumpOn = false;
 boolean isNotifiedPumpOff = false;
 boolean isNotifiedWaterWrong = false;
-int waterHFreq, pumpOkFreq, phFreq;
+int waterHFreq, pumpOkFreq;
 
 volatile int waterFlowCount;
 String mailCommand;
@@ -44,7 +42,6 @@ void setup() {
   mailCommand += " " SMTP_TO;
   waterHFreq = WATER_H_FREQ;
   pumpOkFreq = PUMP_OK_FREQ;
-  phFreq = PH_FREQ;
 
   if (DEBUG) {
     Serial.begin(9600);
@@ -58,11 +55,10 @@ void setup() {
   pinMode(USND_ECHO_PIN, INPUT);
   pinMode(WATER_FLOW_PIN, INPUT);
 
-  lastTimeWaterRead, lastTimePhRead, lastTimePumpCheck = millis();
+  lastTimeWaterRead = millis(), lastTimePumpCheck = millis();
   if (DEBUG) {
     waterHFreq = 1000;
     pumpOkFreq = 1000;
-    phFreq = 1000;
   }
   lcdClearLine(0);
   lcd.print("Setup done...");
@@ -78,11 +74,6 @@ void loop() {
   if (millis() - lastTimeWaterRead >= waterHFreq) {
     readWaterVolume();
     lastTimeWaterRead = millis();
-  }
-
-  if (millis() - lastTimePhRead >= phFreq) {
-    readPh();
-    lastTimePhRead = millis();
   }
 }
 
@@ -138,38 +129,6 @@ void readWaterVolume() {
   }
 }
 
-void readPh() {
-  int buf[10];
-  // Get 10 sample value from the sensor for smooth the value  
-  for (int i=0; i<10; i++) { 
-    buf[i] = analogRead(PH_PIN);
-    delay(10);
-  }
-  // Sort the analog from small to large
-  for (int i=0; i<9; i++) {
-    for(int j=i+1; j<10; j++) {
-      if(buf[i]>buf[j]) {
-        int temp=buf[i];
-        buf[i]=buf[j];
-        buf[j]=temp;
-      }
-    }
-  }
-  
-  // Take the average value of 6 center sample
-  unsigned long avgValue = 0;
-  for(int i=2; i<8; i++) {
-    avgValue += buf[i];
-  }
-  // --- convert the analog into millivolt
-  phValue = (float)avgValue * 5.0 / 1024 / 6;
-  // --- convert the millivolt into pH value
-  // pH = -0.017 * mV + 7 + PH_OFFSET
-  phValue = 3.5 * phValue + PH_OFFSET;
-  
-  displayWaterInfo();
-}
-
 void displaySystemInfo() {
   lcdClearLine(0);
   String v = isPumpOn ? "Pump:ON" : "PUMP:OFF";
@@ -179,13 +138,13 @@ void displaySystemInfo() {
 
 void displayWaterInfo() {
   lcdClearLine(1);
-  char qty[6]="ERR", ph[6];
+  char qty[6]="ERR";
   
   if (waterVol >= 0 && waterVol <= TANK_MAX_L) {
     dtostrf(waterVol, 4, 2, qty);
   }
-  dtostrf(phValue, 4, 2, ph);
-  String s = "W=" + String(qty) + "L - pH=" + String(ph);
+
+  String s = "W=" + String(qty) + "L;
   lcd.print(s);
 }
 
