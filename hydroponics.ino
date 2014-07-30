@@ -16,9 +16,10 @@ long lastTimeWaterRead, lastTimePumpCheck;
 long curTime;
 float waterVol = 0; // in liters
 boolean isPumpOn = false;
-boolean isNotifiedPumpOff = false;
-boolean isNotifiedWaterWrong = false;
+long lastTimeNotPumpOk=0, lastTimeNotWaterLevelOk=0;
+
 int waterHFreq, pumpOkFreq;
+long notPumpOkNotifDelay, notWaterOkNotifDelay;
 
 volatile int waterFlowCount;
 String mailCommand;
@@ -42,6 +43,8 @@ void setup() {
   mailCommand += " " SMTP_TO;
   waterHFreq = WATER_H_FREQ;
   pumpOkFreq = PUMP_OK_FREQ;
+  notWaterOkNotifDelay = NOT_WATER_OK_NOTIF;
+  notPumpOkNotifDelay = NOT_PUMP_OK_NOTIF;
 
   Bridge.begin();
   lcd.init();
@@ -56,6 +59,8 @@ void setup() {
   if (DEBUG) {
     waterHFreq = 1000;
     pumpOkFreq = 1000;
+    notWaterOkNotifDelay = 5000;
+    notPumpOkNotifDelay = 5000;
   }
   lcdClearLine(0);
   lcd.print("Setup done...");
@@ -83,17 +88,10 @@ void checkWaterPump() {
   detachInterrupt(WATER_FLOW_ITR);
   isPumpOn = (waterFlowCount >= WATER_WHEEL_MIN_PULSE);
   if (!isPumpOn) {
-    if (!isNotifiedPumpOff) { // Just send a notification once
-      if (sendEmail("The pump is off")) {
-        isNotifiedPumpOff = true;
+    if (lastTimeNotPumpOk == 0 || ((millis() - lastTimeNotPumpOk) >= notPumpOkNotifDelay)) {
+      if (sendEmail("The pump is off")) 
+        lastTimeNotPumpOk = millis();
       }
-    }
-  }
-  else {
-    if (isNotifiedPumpOff) {
-      sendEmail("The pump is now on");
-    }
-    isNotifiedPumpOff = false;
   }
   displaySystemInfo();
 }
@@ -106,9 +104,9 @@ void readWaterVolume() {
   unsigned int distance = sonar.convert_cm(sonar.ping_median());
   waterVol = ((TANK_HEIGHT - distance) * TANK_SURFACE) / 1000;
   if (waterVol < TANK_MIN_L || waterVol > TANK_MAX_L) {
-    if (!isNotifiedWaterWrong) { // Just send a notification once
+    if (lastTimeNotWaterLevelOk == 0 || ((millis() - lastTimeNotWaterLevelOk) >= notWaterOkNotifDelay)) {
       if (sendEmail("Water volume is wrong : " + String(waterVol) + " L")) {
-        isNotifiedWaterWrong = true;
+        lastTimeNotWaterLevelOk = millis();
       }
     }
   }
