@@ -43,10 +43,6 @@ void setup() {
   waterHFreq = WATER_H_FREQ;
   pumpOkFreq = PUMP_OK_FREQ;
 
-  if (DEBUG) {
-    Serial.begin(9600);
-    while(!Serial);  // wait for Serial port to connect.
-  }
   Bridge.begin();
   lcd.init();
   lcd.backlight();
@@ -55,7 +51,8 @@ void setup() {
   pinMode(USND_ECHO_PIN, INPUT);
   pinMode(WATER_FLOW_PIN, INPUT);
 
-  lastTimeWaterRead = millis(), lastTimePumpCheck = millis();
+  lastTimeWaterRead = millis();
+  lastTimePumpCheck = millis();
   if (DEBUG) {
     waterHFreq = 1000;
     pumpOkFreq = 1000;
@@ -144,7 +141,7 @@ void displayWaterInfo() {
     dtostrf(waterVol, 4, 2, qty);
   }
 
-  String s = "W=" + String(qty) + "L;
+  String s = "W=" + String(qty) + "L";
   lcd.print(s);
 }
 
