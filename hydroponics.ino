@@ -12,7 +12,7 @@
 #include <Process.h>
 #include <NewPing.h> // For ultrasonic sensor
 
-long lastTimeWaterRead, lastTimePumpCheck;
+long lastTimeWaterRead=0, lastTimePumpCheck=0;
 long curTime;
 float waterVol = 0; // in liters
 boolean waterVolOk = false;
@@ -69,12 +69,12 @@ void setup() {
 }
 
 void loop() {
-  if (millis() - lastTimePumpCheck >= pumpOkFreq) {
+  if (lastTimePumpCheck == 0 || ((millis() - lastTimePumpCheck) >= pumpOkFreq)) {
     checkWaterPump();
     lastTimePumpCheck = millis();
   }
 
-  if (millis() - lastTimeWaterRead >= waterHFreq) {
+  if (lastTimeWaterRead == 0 || ((millis() - lastTimeWaterRead) >= waterHFreq)) {
     readWaterVolume();
     lastTimeWaterRead = millis();
   }
