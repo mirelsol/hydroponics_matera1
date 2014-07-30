@@ -15,6 +15,7 @@
 long lastTimeWaterRead, lastTimePumpCheck;
 long curTime;
 float waterVol = 0; // in liters
+boolean waterVolOk = false;
 boolean isPumpOn = false;
 long lastTimeNotPumpOk=0, lastTimeNotWaterLevelOk=0;
 
@@ -93,6 +94,7 @@ void checkWaterPump() {
         lastTimeNotPumpOk = millis();
       }
   }
+  displayDebug("WFcnt=" + String(waterFlowCount), 2);
   displaySystemInfo();
 }
 
@@ -103,24 +105,19 @@ void readWaterVolume() {
   // Do multiple pings (default=5), discard out of range pings and return median in microseconds
   unsigned int distance = sonar.convert_cm(sonar.ping_median());
   waterVol = ((TANK_HEIGHT - distance) * TANK_SURFACE) / 1000;
-  if (waterVol < TANK_MIN_L || waterVol > TANK_MAX_L) {
+  waterVolOk = waterVol >= TANK_MIN_L && waterVol < TANK_MAX_L;
+  if (!waterVolOk) {
     if (lastTimeNotWaterLevelOk == 0 || ((millis() - lastTimeNotWaterLevelOk) >= notWaterOkNotifDelay)) {
       if (sendEmail("Water volume is wrong : " + String(waterVol) + " L")) {
         lastTimeNotWaterLevelOk = millis();
       }
     }
   }
-  else {
-    if (isNotifiedWaterWrong) {
-      sendEmail("Water volume is now OK : " + String(waterVol) + " L");
-    }    
-    isNotifiedWaterWrong = false;
-  }
   
   displayWaterInfo();
   if (DEBUG) {
     String d = "d wat.=" + String(distance) + " " + String(waterVol) + " L";
-    displayDebug(d);
+    displayDebug(d, 3);
   }
 }
 
@@ -139,7 +136,7 @@ void displayWaterInfo() {
     dtostrf(waterVol, 4, 2, qty);
   }
 
-  String s = "W=" + String(qty) + "L";
+  String s = "W=" + String(qty) + "L OK=" + String(waterVolOk);
   lcd.print(s);
 }
 
@@ -148,7 +145,8 @@ boolean sendEmail(String msg) {
     Process p;
     String email = mailCommand + " \"[Hydroponics] " + msg + "\" \"" + msg + "\"";
     //mailCommand += " \"[Hydroponics] " + msg + "\" \"" + msg + "\"";
-    displayDebug("Sending mail...");
+    lcdClearLine(3);
+    displayDebug("Sending mail...", 3);
     int res = p.runShellCommand(email);
     delay(2000);
     return (res == 0);
@@ -164,9 +162,9 @@ void lcdClearLine(int lineNum) {
   lcd.setCursor(0, lineNum);
 }
 
-void displayDebug(String s) {
+void displayDebug(String s, int lineNum) {
   if (DEBUG) {
-    lcdClearLine(3);
+    lcdClearLine(lineNum);
     lcd.print(s);
   }
 }
